@@ -149,8 +149,8 @@ while step < total_steps:
       new_log_prob = new_dist.log_prob(b_action)
 
       
-      #### CHANGES HERE:
       
+      #######################################
       ratio = torch.exp(new_log_prob - b_log_prob)
       
       clipped_ratio = ratio.clamp(min=1.0 - eps,
@@ -162,19 +162,22 @@ while step < total_steps:
       # Clipped policy objective  = L^CPIP
       pi_loss = -policy_reward.mean()
 
+      #######################################
       
       # Clipped value function objective L^VF
       clipped_value = b_value + \
           (new_value - b_value).clamp(min=-eps, max=eps)
           
-      value_loss = torch.max((new_value - b_returns) ** 2, 
-                             (clipped_value - b_returns) ** 2)
+      value_loss = 0.5 * torch.max((new_value - b_returns) ** 2, 
+                             (clipped_value - b_returns) ** 2).mean()
+      
+      ########################################
 
       # Entropy loss          S[Pi_theta](s_t)  (making enough exploration)
-      entropy_loss =  
+      entropy_loss = new_dist.entropy().mean()
 
       # Backpropagate losses     L^PPO
-      loss = pi_loss - c_1*value_loss + c_2*entropy_loss
+      loss = pi_loss + value_coef*value_loss - entropy_coef*entropy_loss
       loss.backward()
 
       # Clip gradients
