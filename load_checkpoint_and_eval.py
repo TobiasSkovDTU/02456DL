@@ -12,11 +12,11 @@ grad_eps = .5
 value_coef = .5
 entropy_coef = .01
 
-feature_dim_ = int(256*2) 
+feature_dim_ = int(256*3) 
 
 
-checkpoint_file_input = r'checkpoint2.pt'
-mp4_file_output = r'vid2.mp4'
+checkpoint_file_input = r'.\Week10_Results\checkpoint3.pt'
+mp4_file_output = r'.\Week10_Results\vid_checkpoint3.mp4'
 
 
 #%%
@@ -96,6 +96,7 @@ trained_policy = Policy(encoder,
                 feature_dim = feature_dim_, 
                 num_actions = env.action_space.n)
 
+#%%
 trained_policy.load_state_dict(torch.load(checkpoint_file_input))
 
 trained_policy.cuda()
