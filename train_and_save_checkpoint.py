@@ -1,7 +1,7 @@
 
 
-# Hyperparameters
-total_steps = 8e6
+# Hyperparameters 
+total_steps = 12e6 #Default 8e6
 num_envs = 32
 num_levels = 10
 num_steps = 256
@@ -12,7 +12,10 @@ grad_eps = .5
 value_coef = .5
 entropy_coef = .01
 
+feature_dim_ = int(256*2) # TA: Experiment with higher
 
+
+checkpoint_output = r'checkpoint.pt'
 
 #%%
 
@@ -83,7 +86,6 @@ print('Action space:', env.action_space.n)
 
 #%%
 
-feature_dim_ = 256 # TA: Experiment with higher
 
 # Define network
 encoder = Encoder(in_channels = 3, feature_dim = feature_dim_)
@@ -192,38 +194,5 @@ while step < total_steps:
   print(f'Step: {step}\tMean reward: {storage.get_reward()}')
 
 print('Completed training!')
-torch.save(policy.state_dict, 'checkpoint.pt')
+torch.save(policy.state_dict(), checkpoint_output)
 
-#%%
-
-import imageio
-
-# Make evaluation environment
-eval_env = make_env(num_envs, start_level=num_levels, num_levels=num_levels)
-obs = eval_env.reset()
-
-frames = []
-total_reward = []
-
-# Evaluate policy
-policy.eval()
-for _ in range(512):
-
-  # Use policy
-  action, log_prob, value = policy.act(obs)
-
-  # Take step in environment
-  obs, reward, done, info = eval_env.step(action)
-  total_reward.append(torch.Tensor(reward))
-
-  # Render environment and store
-  frame = (torch.Tensor(eval_env.render(mode='rgb_array'))*255.).byte()
-  frames.append(frame)
-
-# Calculate average return
-total_reward = torch.stack(total_reward).sum(0).mean(0)
-print('Average return:', total_reward)
-
-# Save frames as video
-frames = torch.stack(frames)
-imageio.mimsave('vid.mp4', frames, fps=25)
