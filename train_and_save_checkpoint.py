@@ -1,9 +1,10 @@
 
 
 # Hyperparameters 
-total_steps = 12e6 #Default 8e6
+total_steps = 8e6 
 num_envs = 32
-num_levels = 10
+start_level = 0
+num_levels = 100
 num_steps = 256
 num_epochs = 3
 batch_size = 512
@@ -79,7 +80,7 @@ class Policy(nn.Module):
 
 # Define environment
 # check the utils.py file for info on arguments
-env = make_env(num_envs, num_levels=num_levels)
+env = make_env(num_envs, start_level=start_level, num_levels=num_levels)
 print('Observation space:', env.observation_space)
 print('Action space:', env.action_space.n)
 
@@ -116,6 +117,7 @@ step = 0
 while step < total_steps:
 
   # Use policy to collect data for num_steps steps
+  # (data collectionfor num_envs*num_steps)
   policy.eval()
   for _ in range(num_steps):
     # Use policy
@@ -139,11 +141,16 @@ while step < total_steps:
 
   # Optimize policy
   policy.train()
-  for epoch in range(num_epochs):
+  #Taking "num_epochs" SGD steps based on same data each iteration (step)
+  for epoch in range(num_epochs): 
 
     # Iterate over batches of transitions
     generator = storage.get_generator(batch_size)
-    for batch in generator:
+
+    
+    #num_batches = (num_envs*num_steps)/batch_size 
+    # (32*256)/512= 16 default
+    for batch in generator: 
       b_obs, b_action, b_log_prob, b_value, b_returns, b_advantage = batch
 
       # Get current policy outputs
@@ -161,7 +168,7 @@ while step < total_steps:
       policy_reward = torch.min(ratio * b_advantage,
                                   clipped_ratio * b_advantage)
 
-      # Clipped policy objective  = L^CPIP
+      # Clipped policy objective  = L^CLIP
       pi_loss = -policy_reward.mean()
 
       #######################################
@@ -178,6 +185,9 @@ while step < total_steps:
       # Entropy loss          S[Pi_theta](s_t)  (making enough exploration)
       entropy_loss = new_dist.entropy().mean()
 
+      ########################################
+       
+      
       # Backpropagate losses     L^PPO
       loss = pi_loss + value_coef*value_loss - entropy_coef*entropy_loss
       loss.backward()

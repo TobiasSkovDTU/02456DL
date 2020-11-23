@@ -1,7 +1,7 @@
 
 
 # Hyperparameters 
-total_steps = 8e4 #Default 8e6
+total_steps = 8e6 #Default 8e6
 num_envs = 32
 num_levels = 10
 num_steps = 256
@@ -194,16 +194,6 @@ while step < total_steps:
 print('Completed training!')
 torch.save(policy.state_dict(), 'checkpoint.pt')
 
-#%%
-
-trained_policy = Policy(encoder, 
-                feature_dim = feature_dim_, 
-                num_actions = env.action_space.n)
-
-trained_policy.load_state_dict(torch.load('checkpoint2.pt'))
-
-
-trained_policy.cuda()
 
 #%%
 import imageio
@@ -216,11 +206,11 @@ frames = []
 total_reward = []
 
 # Evaluate policy
-trained_policy.eval()
-for _ in range(512 * 4): #Default 512
+policy.eval()
+for _ in range(512): #Default 512
 
   # Use policy
-  action, log_prob, value = trained_policy.act(obs)
+  action, log_prob, value = policy.act(obs)
 
   # Take step in environment
   obs, reward, done, info = eval_env.step(action)
@@ -236,4 +226,4 @@ print('Average return:', total_reward)
 
 # Save frames as video
 frames = torch.stack(frames)
-imageio.mimsave('vid2.mp4', frames, fps=25)
+imageio.mimsave('vid.mp4', frames, fps=25)

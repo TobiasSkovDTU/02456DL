@@ -1,30 +1,30 @@
 
 
 # Hyperparameters 
-total_steps = 8e4 #Default 8e6
+total_steps = 8e6 
 num_envs = 32
-num_levels = 10
-num_steps = 256
-num_epochs = 3
-batch_size = 512
-eps = .2
-grad_eps = .5
-value_coef = .5
-entropy_coef = .01
-
-feature_dim_ = int(256*3) 
+start_level = 0
+num_levels = 100
 
 
-checkpoint_file_input = r'.\Week10_Results\checkpoint3.pt'
-mp4_file_output = r'.\Week10_Results\vid_checkpoint3.mp4'
+
+
+feature_dim_ = int(256*1) 
+
+
+checkpoint_file_input = r'.\Week11_Results\baseline_tests\checkpoint1.pt'
+mp4_file_output = r'.\Week11_Results\baseline_tests\checkpoint1_vid.mp4'
+evaluation_file = r'.\Week11_Results\baseline_tests\checkpoint1_evaluation.txt'
 
 
 #%%
 
-
+import copy
 import torch
 import torch.nn as nn
+import numpy as np
 from utils import make_env, orthogonal_init
+import imageio
 
 
 #%%
@@ -96,16 +96,17 @@ trained_policy = Policy(encoder,
                 feature_dim = feature_dim_, 
                 num_actions = env.action_space.n)
 
+
 #%%
 trained_policy.load_state_dict(torch.load(checkpoint_file_input))
 
 trained_policy.cuda()
-
 #%%
-import imageio
+
+#%% Running for fixed duration
 
 # Make evaluation environment
-eval_env = make_env(1, start_level=num_levels, num_levels=num_levels) #Default: num_envs (not 1)
+eval_env = make_env(num_envs, start_level=start_level, num_levels=num_levels) 
 obs = eval_env.reset()
 
 frames = []
@@ -113,7 +114,7 @@ total_reward = []
 
 # Evaluate policy
 trained_policy.eval()
-for _ in range(512 * 4): #Default 512
+for _ in range(512): #Default 512
 
   # Use policy
   action, log_prob, value = trained_policy.act(obs)
@@ -128,8 +129,72 @@ for _ in range(512 * 4): #Default 512
 
 # Calculate average return
 total_reward = torch.stack(total_reward).sum(0).mean(0)
-print('Average return:', total_reward)
+string_eval_1 = 'Average return (fixed simulation lenght): {}'.format(total_reward)
+print(string_eval_1)
 
 # Save frames as video
 frames = torch.stack(frames)
 imageio.mimsave(mp4_file_output, frames, fps=25)
+
+
+#%% Running until all done
+
+# Make evaluation environment
+eval_env = make_env(num_envs, start_level=start_level, num_levels=num_levels) 
+obs = eval_env.reset()
+
+
+reward_matrix = []
+still_running = np.ones(num_envs, dtype=bool)
+still_running_matrix = []
+
+# Evaluate policy
+count = 0
+loop_running = True
+trained_policy.eval()
+while loop_running: 
+
+  # Use policy
+  action, log_prob, value = trained_policy.act(obs)
+
+  # Take step in environment
+  obs, reward, done, info = eval_env.step(action)
+  reward_matrix.append(torch.Tensor(reward))
+  
+  still_running[done] = False #When a simultion is done its index will be False
+  still_running_matrix.append(torch.from_numpy(copy.deepcopy(still_running)))
+
+  count += 1
+  if still_running.sum() == 0:
+      loop_running = False
+
+
+still_running_matrix = torch.stack(still_running_matrix)
+reward_matrix = torch.stack(reward_matrix)
+
+
+total_reward = 0
+for i in range(num_envs):
+    
+    reward = reward_matrix[:,i]
+
+    boolean = still_running_matrix[:,i]
+
+    total_reward += reward[boolean].sum()
+
+average_reward = total_reward/num_envs
+
+# Calculate average return
+string_eval_2 = 'Average return (running until death): {}'.format(average_reward)
+print(string_eval_2)
+string_eval_3 = "Longest run in number of steps {}".format(count)
+print(string_eval_3)
+
+
+#%%
+
+with open(evaluation_file, 'w') as outfile:
+    outfile.write(string_eval_1 + "\n\n\n")
+    outfile.write(string_eval_2 + "\n")
+    outfile.write(string_eval_3 + "\n")
+    
