@@ -16,7 +16,7 @@ entropy_coef = .01
 feature_dim_ = int(256) 
 
 
-checkpoint_output = r'checkpoint_test.pt'
+checkpoint_output = r'checkpoint_impala_stack.pt'
 
 #%%
 
@@ -97,24 +97,7 @@ class ImpalaModel(nn.Module):
         x = nn.ReLU()(x)
         return x
 
-#%% Nature Encoder
-# https://github.com/joonleesky/train-procgen-pytorch/blob/master/common/model.py
 
-
-class Encoder(nn.Module):
-  def __init__(self, in_channels, feature_dim):
-    super().__init__()
-    self.layers = nn.Sequential(
-        nn.Conv2d(in_channels=in_channels, out_channels=32, kernel_size=8, stride=4), nn.ReLU(),
-        nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2), nn.ReLU(),
-        nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1), nn.ReLU(),
-        Flatten(),
-        nn.Linear(in_features=1024, out_features=feature_dim), nn.ReLU()
-    )
-    self.apply(orthogonal_init)
-
-  def forward(self, x):
-    return self.layers(x)
 
 #%%
 
@@ -146,9 +129,16 @@ class Policy(nn.Module):
 
 # Define environment
 # check the utils.py file for info on arguments
-env = make_env(num_envs, start_level=start_level, num_levels=num_levels)
-print('Observation space:', env.observation_space)
-print('Action space:', env.action_space.n)
+
+
+vec_env = make_env(num_envs, 
+				   start_level=start_level, 
+				   num_levels=num_levels,
+				   vector_stack = True)
+
+
+print('Observation space:', vec_env.observation_space)
+print('Action space:', vec_env.action_space.n)
 
 
 #%%
@@ -156,11 +146,11 @@ print('Action space:', env.action_space.n)
 
 # Define network
 #encoder = Encoder(in_channels = 3, feature_dim = feature_dim_)
-encoder = ImpalaModel(in_channels = 3, feature_dim=feature_dim_)
+encoder = ImpalaModel(in_channels = 9, feature_dim=feature_dim_)
 
 policy = Policy(encoder, 
                 feature_dim = feature_dim_, 
-                num_actions = env.action_space.n)
+                num_actions = vec_env.action_space.n)
 policy.cuda()
 
 #%%
@@ -172,7 +162,7 @@ optimizer = torch.optim.Adam(policy.parameters(), lr=5e-4, eps=1e-5)
 # Define temporary storage
 # we use this to collect transitions during each iteration
 storage = Storage(
-    env.observation_space.shape,
+    vec_env.observation_space.shape,
     num_steps,
     num_envs
 )
@@ -180,7 +170,7 @@ storage = Storage(
 
 #%%
 # Run training
-obs = env.reset()
+obs = vec_env.reset()
 step = 0
 while step < total_steps:
 
@@ -192,7 +182,7 @@ while step < total_steps:
     action, log_prob, value = policy.act(obs)
     
     # Take step in environment
-    next_obs, reward, done, info = env.step(action)
+    next_obs, reward, done, info = vec_env.step(action)
 
     # Store data
     storage.store(obs, action, reward, done, info, log_prob, value)

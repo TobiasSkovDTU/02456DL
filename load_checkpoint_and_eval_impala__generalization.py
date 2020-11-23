@@ -209,7 +209,7 @@ while loop_running:
   obs, reward, done, info = eval_env.step(action)
   reward_matrix.append(torch.Tensor(reward))
   
-  still_running[done] = False #When a simultion is done its index will be False
+  still_running[done] = False #When a simulation is done its index will be False
   still_running_matrix.append(torch.from_numpy(copy.deepcopy(still_running)))
 
   count += 1

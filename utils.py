@@ -20,14 +20,15 @@ Utility functions for the deep RL projects that I supervise in 02456 Deep Learni
 
 
 def make_env(
-	n_envs=32,
+    n_envs=32,
 	env_name='starpilot',
 	start_level=0,
 	num_levels=100,
 	use_backgrounds=False,
 	normalize_obs=False,
 	normalize_reward=True,
-	seed=0
+	seed=0,
+    vector_stack = False
 	):
 	"""Make environment for procgen experiments"""
 	set_global_seeds(seed)
@@ -45,9 +46,14 @@ def make_env(
 	)
 	env = VecExtractDictObs(env, "rgb")
 	env = VecNormalize(env, ob=normalize_obs, ret=normalize_reward)
-	env = TransposeFrame(env)
+    
+	if vector_stack:
+		env = VecFrameStack(venv = env, nstack = 3)
+		
+	env = TransposeFrame(env) 
 	env = ScaledFloatFrame(env)
 	env = TensorEnv(env)
+
 	
 	return env
 
