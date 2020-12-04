@@ -1,0 +1,5 @@
+Average return (fixed simulation lenght): 18.021835327148438
+
+
+Average return (running until death): 10.308578491210938
+Longest run in number of steps 424

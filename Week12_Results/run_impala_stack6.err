@@ -1,0 +1,10 @@
+Loaded module: python3/3.8.0
+Loaded module: cuda/8.0
+Loaded module: cudnn/v7.0-prod-cuda8
+Loaded module: ffmpeg/4.2.2
+WARNING: You are using pip version 19.2.3, however version 20.2.4 is available.
+You should consider upgrading via the 'pip install --upgrade pip' command.
+WARNING: You are using pip version 19.2.3, however version 20.2.4 is available.
+You should consider upgrading via the 'pip install --upgrade pip' command.
+WARNING: You are using pip version 19.2.3, however version 20.2.4 is available.
+You should consider upgrading via the 'pip install --upgrade pip' command.
